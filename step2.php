@@ -7,7 +7,7 @@ $config = json_decode($configData, true);
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Step 2 - 智能业绩录入系统 (百分比版)</title>
+    <title>Step 2 - 智能业绩录入系统 (严谨财务版)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
@@ -37,6 +37,7 @@ $config = json_decode($configData, true);
         /* 颜色语义化 */
         .my-cyan { background-color: #e3fcf2 !important; color: #0d6832; }
         .blue-zone { background-color: #eaf4ff !important; color: #0056b3; }
+        .cost-zone { background-color: #fff5f5 !important; color: #c92a2a; } /* 红色区域给成本 */
         .input-sm { font-size: 11px; height: 28px; border-radius: 4px; }
         
         /* 输入高亮 */
@@ -46,7 +47,6 @@ $config = json_decode($configData, true);
         .btn-add-perf:hover { background: #f0f7ff; }
         
         .sticky-bottom-bar { position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); padding: 15px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); z-index: 1000; }
-        .unit-tag { font-size: 10px; color: #999; margin-left: 2px; }
     </style>
 </head>
 <body>
@@ -60,7 +60,7 @@ $config = json_decode($configData, true);
 <div class="container-fluid pb-5">
     <form id="perfForm" action="calculate_final.php" method="POST">
         <div class="d-flex justify-content-between align-items-center p-3 ms-5">
-            <h4>Step 2: 业绩录入 <small class="text-muted" style="font-size:12px;">(成本率已改为百分比录入模式)</small></h4>
+            <h4>Step 2: 业绩录入 <small class="text-muted" style="font-size:11px;"></small></h4>
             <div class="btn-group">
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="localStorage.removeItem('perf_draft'); location.reload();">重置清空</button>
             </div>
@@ -71,25 +71,29 @@ $config = json_decode($configData, true);
         foreach ($levels as $lIdx => $levelName): 
         ?>
         <div class="agent-block" id="agt_anchor_<?=$lIdx?>">
-            <div class="agent-header d-flex align-items-center">
-                <span class="badge bg-primary me-2">L<?=$lIdx?></span>
-                <input type="text" name="agt[<?=$lIdx?>][name]" class="form-control form-control-sm me-3" style="width:150px" placeholder="代理账号" required>
+            <div class="agent-header d-flex align-items-center flex-wrap gap-2">
+                <span class="badge bg-primary">L<?=$lIdx?></span>
+                <input type="text" name="agt[<?=$lIdx?>][name]" class="form-control form-control-sm" style="width:120px" placeholder="代理账号" required>
                 
-                <div class="input-group input-group-sm w-auto me-2 shadow-sm">
-                    <span class="input-group-text my-cyan">手续%</span>
-                    <input type="number" step="0.01" name="agt[<?=$lIdx?>][ryx]" class="form-control input-sm" style="width:60px" value="0">
-                </div>
-                <div class="input-group input-group-sm w-auto me-2 shadow-sm">
-                    <span class="input-group-text my-cyan">支付%</span>
-                    <input type="number" step="0.01" name="agt[<?=$lIdx?>][rzf]" class="form-control input-sm" style="width:60px" value="0">
-                </div>
-                <div class="input-group input-group-sm w-auto me-2 shadow-sm">
-                    <span class="input-group-text my-cyan">优惠%</span>
-                    <input type="number" step="0.01" name="agt[<?=$lIdx?>][ryh]" class="form-control input-sm" style="width:60px" value="0">
+                <div class="input-group input-group-sm w-auto shadow-sm">
+                    <span class="input-group-text my-cyan">游戏%</span>
+                    <input type="number" step="0.01" name="agt[<?=$lIdx?>][ryx]" class="form-control input-sm" style="width:55px" value="0" title="玩家输赢扣除的手续费率">
                 </div>
                 <div class="input-group input-group-sm w-auto shadow-sm">
-                    <span class="input-group-text bg-warning text-dark fw-bold">成本率%</span>
-                    <input type="number" step="0.1" name="agt[<?=$lIdx?>][costRate]" class="form-control input-sm fw-bold" style="width:60px; color:red;" value="10">
+                    <span class="input-group-text my-cyan">支付%</span>
+                    <input type="number" step="0.01" name="agt[<?=$lIdx?>][rzf]" class="form-control input-sm" style="width:55px" value="0" title="充值金额产生的支付成本">
+                </div>
+                <div class="input-group input-group-sm w-auto shadow-sm">
+                    <span class="input-group-text my-cyan">代付%</span>
+                    <input type="number" step="0.01" name="agt[<?=$lIdx?>][rdf]" class="form-control input-sm" style="width:55px" value="1.0" title="提现金额产生的代付手续费">
+                </div>
+                <div class="input-group input-group-sm w-auto shadow-sm">
+                    <span class="input-group-text my-cyan">优惠%</span>
+                    <input type="number" step="0.01" name="agt[<?=$lIdx?>][ryh]" class="form-control input-sm" style="width:55px" value="0" title="赠送优惠产生的成本占比">
+                </div>
+                <div class="input-group input-group-sm w-auto shadow-sm">
+                    <span class="input-group-text bg-warning text-dark fw-bold">代理成本%</span>
+                    <input type="number" step="0.1" name="agt[<?=$lIdx?>][costRate]" class="form-control input-sm fw-bold" style="width:55px; color:red;" value="10">
                 </div>
             </div>
 
@@ -100,11 +104,11 @@ $config = json_decode($configData, true);
                             <th width="12%">分类</th>
                             <th width="12%">品牌</th>
                             <th width="12%">游戏</th>
-                            <th class="blue-zone">输赢(GGR)</th>
-                            <th class="blue-zone">总投注额</th>
-                            <th class="my-cyan">充值</th>
-                            <th class="my-cyan">提现</th>
-                            <th class="my-cyan">优惠</th>
+                            <th class="blue-zone">玩家输赢(GGR)</th>
+                            <th class="blue-zone">投注金额</th>
+                            <th class="my-cyan">充值金额</th>
+                            <th class="my-cyan">提现金额</th>
+                            <th class="my-cyan">优惠金额</th>
                             <th width="40"></th>
                         </tr>
                     </thead>
@@ -117,7 +121,7 @@ $config = json_decode($configData, true);
 
         <div class="sticky-bottom-bar text-center">
             <button type="submit" class="btn btn-primary px-5 shadow-lg" style="font-weight:bold; height:48px; border-radius: 24px;">
-                <i class="bi bi-calculator-fill me-2"></i>保存并执行
+                <i class="bi bi-calculator-fill me-2"></i>保存并执行结算
             </button>
         </div>
     </form>
@@ -145,7 +149,7 @@ function addPerfRow(lIdx) {
         <td class="blue-zone"><input type="number" step="0.01" name="agt[${lIdx}][p][${rowId}][ggr]" class="form-control input-sm" value="0"></td>
         <td class="blue-zone"><input type="number" step="0.01" name="agt[${lIdx}][p][${rowId}][bet]" class="form-control input-sm" value="0"></td>
         <td class="my-cyan"><input type="number" step="0.01" name="agt[${lIdx}][p][${rowId}][cz]" class="form-control input-sm" value="0"></td>
-        <td class="my-cyan"><input type="number" step="0.01" name="agt[${lIdx}][p][${rowId}][tx]" class="form-control input-sm" value="0"></td>
+        <td class="bg-light"><input type="number" step="0.01" name="agt[${lIdx}][p][${rowId}][tx]" class="form-control input-sm" value="0"></td>
         <td class="my-cyan"><input type="number" step="0.01" name="agt[${lIdx}][p][${rowId}][yh]" class="form-control input-sm" value="0"></td>
         <td class="text-center"><button type="button" class="btn btn-sm text-danger" onclick="this.closest('tr').remove()"><i class="bi bi-trash"></i></button></td>
     `;
@@ -179,12 +183,10 @@ function updateGames(brandSelect, lIdx, rowId) {
     }
 }
 
-// 自动全选
 document.addEventListener('focusin', (e) => {
     if (e.target.tagName === 'INPUT' && e.target.type === 'number') e.target.select();
 });
 
-// 防丢拦截
 window.onbeforeunload = function() {
     if (isChanged) return "检测到您有未保存的数据，确定要离开吗？";
 };
