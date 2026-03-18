@@ -10,19 +10,42 @@ $input = $_POST['agt'] ?? [];
 $agentReports = [];
 
 function getRate($lIdx, $p, $config) {
-    $idx_fy = $lIdx * 2; $idx_zc = $lIdx * 2 + 1;
-    $f_fy = 0; $f_zc = 0;
-    $info = ['cat' => '未知', 'brand' => '-'];
+    $idx_fy = $lIdx * 2; 
+    $idx_zc = $lIdx * 2 + 1;
+    $f_fy = 0; 
+    $f_zc = 0;
+    $info = ['cat' => '未知', 'brand' => '-', 'game' => '-'];
+
+    // 1. 尝试获取分类层费率
     if ($p['cat_idx'] !== "" && isset($config[$p['cat_idx']])) {
         $c = $config[$p['cat_idx']];
         $info['cat'] = $c['category_name'];
         $f_fy = (float)($c['category_rates'][$idx_fy] ?? 0) / 100;
         $f_zc = (float)($c['category_rates'][$idx_zc] ?? 0) / 100;
+
+        // 2. 尝试获取品牌层费率（覆盖分类层）
         if ($p['brand_idx'] !== "" && isset($c['brands'][$p['brand_idx']])) {
             $b = $c['brands'][$p['brand_idx']];
             $info['brand'] = $b['brand_name'];
-            $f_fy = (float)($b['brand_rates'][$idx_fy] ?? $f_fy * 100) / 100;
-            $f_zc = (float)($b['brand_rates'][$idx_zc] ?? $f_zc * 100) / 100;
+            
+            // 注意：根据你 save_step1.php 的逻辑，品牌费率存的是 'brand_rates' 或 'rates'
+            // 这里建议做个兼容处理
+            $b_rates = $b['brand_rates'] ?? $b['rates'] ?? null;
+            if ($b_rates) {
+                $f_fy = (float)($b_rates[$idx_fy] ?? $f_fy * 100) / 100;
+                $f_zc = (float)($b_rates[$idx_zc] ?? $f_zc * 100) / 100;
+            }
+
+            // 3. 【新增】尝试获取具体游戏层费率（最终覆盖）
+            if ($p['game_idx'] !== "" && isset($b['games'][$p['game_idx']])) {
+                $g = $b['games'][$p['game_idx']];
+                $info['game'] = $g['name'];
+                
+                if (isset($g['rates'])) {
+                    $f_fy = (float)($g['rates'][$idx_fy] ?? $f_fy * 100) / 100;
+                    $f_zc = (float)($g['rates'][$idx_zc] ?? $f_zc * 100) / 100;
+                }
+            }
         }
     }
     return ['fy' => $f_fy, 'zc' => $f_zc, 'info' => $info];
